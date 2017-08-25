@@ -5,16 +5,19 @@ import { MetricsConfiguration } from 'tsmetrics-core/MetricsConfiguration';
 import * as archy from 'archy';
 import { Minimatch } from 'minimatch';
 import { Compiler } from 'webpack';
+import * as chalk from 'chalk';
 
 class CodeMetricsOptions extends MetricsConfiguration {
     exclude = ["**/node_modules/**/*"];
     reportThreshold = 5;
+    significantReportThreshold = 10;
 }
 class CodeMetricsPlugin {
     private options: CodeMetricsOptions;
 
     constructor(options: CodeMetricsOptions = new CodeMetricsOptions()) {
         this.options = Object.assign(new CodeMetricsOptions(), options || {});
+        this.options.significantReportThreshold = Math.max(this.options.significantReportThreshold, this.options.reportThreshold);
     }
 
     public apply(compiler: Compiler) {
@@ -32,7 +35,7 @@ class CodeMetricsPlugin {
             }
         });
         console.log("Complexity analysis:")
-        console.log(roots.map(root => archy(root)).join("\n"));
+        console.log(roots.map(root => archy(root, "", { unicode: false })).join("\n"));
 
         callback();
     }
@@ -70,10 +73,17 @@ class CodeMetricsPlugin {
     }
 
     private collectReport(model: IMetricsModel, parent: Node) {
-        if (model.getCollectedComplexity() > this.options.reportThreshold) {
+        const complexity = model.getCollectedComplexity();
+        if (complexity >= this.options.reportThreshold) {
             var current = parent;
             if (model.visible && model.collectorType != "MAX") {
-                current = { label: this.modelToString(model), nodes: [] };
+                let label = this.modelToString(model);
+                if (complexity >= this.options.significantReportThreshold) {
+                    label = chalk.red(label);
+                }else {
+                    label = chalk.yellow(label);
+                }
+                current = { label: label, nodes: [] };
                 parent.nodes.push(current);
             }
 

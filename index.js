@@ -15,12 +15,14 @@ var MetricsParser_1 = require("tsmetrics-core/MetricsParser");
 var MetricsConfiguration_1 = require("tsmetrics-core/MetricsConfiguration");
 var archy = require("archy");
 var minimatch_1 = require("minimatch");
+var chalk = require("chalk");
 var CodeMetricsOptions = (function (_super) {
     __extends(CodeMetricsOptions, _super);
     function CodeMetricsOptions() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
         _this.exclude = ["**/node_modules/**/*"];
-        _this.reportTreshold = 5;
+        _this.reportThreshold = 5;
+        _this.significantReportThreshold = 10;
         return _this;
     }
     return CodeMetricsOptions;
@@ -29,6 +31,7 @@ var CodeMetricsPlugin = (function () {
     function CodeMetricsPlugin(options) {
         if (options === void 0) { options = new CodeMetricsOptions(); }
         this.options = Object.assign(new CodeMetricsOptions(), options || {});
+        this.options.significantReportThreshold = Math.max(this.options.significantReportThreshold, this.options.reportThreshold);
     }
     CodeMetricsPlugin.prototype.apply = function (compiler) {
         var _this = this;
@@ -46,7 +49,8 @@ var CodeMetricsPlugin = (function () {
                 roots.push(root);
             }
         });
-        console.log(roots.map(function (root) { return archy(root); }).join("\n"));
+        console.log("Complexity analysis:");
+        console.log(roots.map(function (root) { return archy(root, "", { unicode: false }); }).join("\n"));
         callback();
     };
     CodeMetricsPlugin.prototype.collectRelevantFiles = function (compilation) {
@@ -81,10 +85,18 @@ var CodeMetricsPlugin = (function () {
     };
     CodeMetricsPlugin.prototype.collectReport = function (model, parent) {
         var _this = this;
-        if (model.getCollectedComplexity() > this.options.reportTreshold) {
+        var complexity = model.getCollectedComplexity();
+        if (complexity >= this.options.reportThreshold) {
             var current = parent;
             if (model.visible && model.collectorType != "MAX") {
-                current = { label: this.modelToString(model), nodes: [] };
+                var label = this.modelToString(model);
+                if (complexity >= this.options.significantReportThreshold) {
+                    label = chalk.red(label);
+                }
+                else {
+                    label = chalk.yellow(label);
+                }
+                current = { label: label, nodes: [] };
                 parent.nodes.push(current);
             }
             model.children.forEach(function (element) {
