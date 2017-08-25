@@ -1,0 +1,17 @@
+{
+  "name": "tsmetrics-webpack-plugin",
+  "version": "0.0.1",
+  "description": "Webpack plugin for codemetrics computation",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tamas Kiss",
+  "publisher": "kisstkondoros",
+  "license": "MIT",
+  "dependencies": {
+    "archy": "^1.0.0",
+    "minimatch": "^3.0.4",
+    "tsmetrics-core": "^0.4.2"
+  }
+}
