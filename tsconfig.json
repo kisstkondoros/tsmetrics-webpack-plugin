@@ -1,6 +1,10 @@
 {
     "compilerOptions": {
-        "allowJs": true,
-        "checkJs": true
+        "target": "es5",
+        "moduleResolution": "node",
+        "sourceMap": true,
+        "lib": [
+            "es6"
+        ]
     }
 }

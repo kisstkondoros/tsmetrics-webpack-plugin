@@ -4,7 +4,7 @@
   "description": "Webpack plugin for codemetrics computation",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc"
   },
   "author": "Tamas Kiss",
   "publisher": "kisstkondoros",
@@ -12,6 +12,12 @@
   "dependencies": {
     "archy": "^1.0.0",
     "minimatch": "^3.0.4",
-    "tsmetrics-core": "^0.4.2"
+    "tsmetrics-core": "^0.4.2",
+    "typescript": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/archy": "0.0.31",
+    "@types/minimatch": "^3.0.1",
+    "@types/webpack": "^3.0.10"
   }
 }
