@@ -23,6 +23,7 @@ var CodeMetricsOptions = (function (_super) {
         _this.exclude = ["**/node_modules/**/*"];
         _this.reportThreshold = 5;
         _this.significantReportThreshold = 10;
+        _this.emitJSON = false;
         return _this;
     }
     return CodeMetricsOptions;
@@ -30,27 +31,45 @@ var CodeMetricsOptions = (function (_super) {
 var CodeMetricsPlugin = (function () {
     function CodeMetricsPlugin(options) {
         if (options === void 0) { options = new CodeMetricsOptions(); }
+        this.roots = [];
         this.options = Object.assign(new CodeMetricsOptions(), options || {});
         this.options.significantReportThreshold = Math.max(this.options.significantReportThreshold, this.options.reportThreshold);
     }
     CodeMetricsPlugin.prototype.apply = function (compiler) {
         var _this = this;
+        this.roots = [];
         compiler.plugin('emit', function (compilation, callback) { return _this.collectMetricsReport(compilation, callback); });
+        compiler.plugin('done', function () {
+            console.log("Complexity analysis:");
+            console.log(_this.roots.map(function (root) { return archy(root, "", { unicode: false }); }).join("\n"));
+        });
     };
     CodeMetricsPlugin.prototype.collectMetricsReport = function (compilation, callback) {
         var _this = this;
         var fileSet = this.collectRelevantFiles(compilation);
-        var roots = [];
+        var results = [];
         fileSet.forEach(function (filepath) {
-            var root = { label: filepath, nodes: [] };
+            var root = { label: filepath, caption: filepath, nodes: [] };
             var parseResult = MetricsParser_1.MetricsParser.getMetrics(filepath, _this.options, ts.ScriptTarget.Latest);
             parseResult.metrics.children.forEach(function (model) { return _this.collectReport(model, root); });
             if (root.nodes.length > 0) {
-                roots.push(root);
+                _this.roots.push(root);
+                results.push(parseResult);
             }
         });
-        console.log("Complexity analysis:");
-        console.log(roots.map(function (root) { return archy(root, "", { unicode: false }); }).join("\n"));
+        if (this.options.emitJSON) {
+            var allMetrics_1 = JSON.stringify({ label: "", caption: "", nodes: this.roots }, function (name, value) {
+                return name == "label" ? undefined : value;
+            }, 4);
+            compilation.assets['codemetrics.json'] = {
+                source: function () {
+                    return allMetrics_1;
+                },
+                size: function () {
+                    return allMetrics_1.length;
+                }
+            };
+        }
         callback();
     };
     CodeMetricsPlugin.prototype.collectRelevantFiles = function (compilation) {
@@ -89,14 +108,15 @@ var CodeMetricsPlugin = (function () {
         if (complexity >= this.options.reportThreshold) {
             var current = parent;
             if (model.visible && model.collectorType != "MAX") {
-                var label = this.modelToString(model);
+                var caption = this.modelToString(model);
+                var coloredLabel = caption;
                 if (complexity >= this.options.significantReportThreshold) {
-                    label = chalk.red(label);
+                    coloredLabel = chalk.red(caption);
                 }
                 else {
-                    label = chalk.yellow(label);
+                    coloredLabel = chalk.yellow(caption);
                 }
-                current = { label: label, nodes: [] };
+                current = { label: coloredLabel, caption: caption, nodes: [], complexity: complexity };
                 parent.nodes.push(current);
             }
             model.children.forEach(function (element) {
